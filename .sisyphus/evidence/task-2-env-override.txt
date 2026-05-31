@@ -1,0 +1,9 @@
+T2: Environment variable override test
+========================================
+Command: MEGAETH_WS_URL=wss://mainnet.megaeth.com/ws uv run python -c 'from app.core.config import settings; print(f"MEGAETH_WS_URL={settings.megaeth_ws_url}")'
+
+Output:
+MEGAETH_WS_URL=wss://mainnet.megaeth.com/ws
+
+Result: ✅ Environment variable override works correctly.
+Settings picks up env var `MEGAETH_WS_URL` over the default or .env value.

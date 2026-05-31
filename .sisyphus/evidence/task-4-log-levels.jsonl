@@ -1,0 +1,3 @@
+{"component": "test", "event": "info message", "logger": "qa-log-levels", "level": "info", "timestamp": "2026-05-31T06:27:25.852095Z"}
+{"component": "test", "event": "warning message", "logger": "qa-log-levels", "level": "warning", "timestamp": "2026-05-31T06:27:25.852487Z"}
+{"component": "test", "event": "error message", "logger": "qa-log-levels", "level": "error", "timestamp": "2026-05-31T06:27:25.852758Z"}

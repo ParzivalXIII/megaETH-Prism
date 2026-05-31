@@ -1,0 +1,101 @@
+version: "3.8"
+
+name: megaeth-orchestration
+
+volumes:
+  postgres_data:
+    driver: local
+  qdrant_data:
+    driver: local
+
+networks:
+  megaeth-net:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: megaeth
+      POSTGRES_PASSWORD: megaeth
+      POSTGRES_DB: megaeth
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U megaeth -d megaeth"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - megaeth-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    command: ["redis-server", "--maxmemory", "2gb", "--maxmemory-policy", "noeviction", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - megaeth-net
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /healthz HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3 && timeout 2 cat <&3 | head -1 | grep -q 200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - megaeth-net
+    restart: unless-stopped
+
+  cohere-embed:
+    image: cohere-embed:latest
+    environment:
+      CO_API_KEY: "${CO_API_KEY:-none}"
+      MODEL: "${COHERE_MODEL:-embed-english-v3.0}"
+      INPUT_TYPE: "${COHERE_INPUT_TYPE:-search_document}"
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c 'import http.client; c=http.client.HTTPConnection(\"localhost\",8000,timeout=5); c.request(\"GET\",\"/health\"); r=c.getresponse(); exit(0 if r.status==200 else 1)'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - megaeth-net
+    restart: unless-stopped
+
+  app:
+    profiles: ["app"]  # Excluded from default `docker compose up`
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DOCKER_ENV: "true"
+      REDIS_URL: "redis://redis:6379/0"
+      POSTGRES_URL: "postgresql+asyncpg://megaeth:megaeth@postgres:5432/megaeth"
+      QDRANT_URL: "http://qdrant:6333"
+      COHERE_EMBED_URL: "http://cohere-embed:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      cohere-embed:
+        condition: service_healthy
+    networks:
+      - megaeth-net
+    restart: unless-stopped

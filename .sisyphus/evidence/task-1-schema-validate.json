@@ -1,0 +1,20 @@
+{
+  "payload_id": "0xabc123",
+  "block_number": 100,
+  "index": 0,
+  "tx_offset": 0,
+  "log_offset": 0,
+  "gas_offset": 0,
+  "timestamp": 1700000000000,
+  "gas_used": 21000,
+  "transactions": [
+    "0xtx1",
+    "0xtx2",
+    "0xtx3"
+  ],
+  "receipts": [
+    "0xrcpt1",
+    "0xrcpt2",
+    "0xrcpt3"
+  ]
+}

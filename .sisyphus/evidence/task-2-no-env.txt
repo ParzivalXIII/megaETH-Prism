@@ -1,0 +1,9 @@
+T2: Default values without .env file test
+============================================
+Command: mv .env .env.bak && uv run python -c 'from app.core.config import settings; print(f"MEGAETH_WS_URL={settings.megaeth_ws_url}")' && mv .env.bak .env
+
+Output:
+MEGAETH_WS_URL=wss://carrot.megaeth.com/ws
+
+Result: ✅ Without .env file, defaults are loaded correctly.
+The default value `wss://carrot.megaeth.com/ws` is used when no .env is present and no env var is set.

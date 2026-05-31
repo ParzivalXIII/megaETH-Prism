@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.0.3, pluggy-1.6.0 -- /home/parzival/projects/megaeth-projects/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/parzival/projects/megaeth-projects
+configfile: pyproject.toml
+plugins: langsmith-0.8.7, asyncio-1.4.0, anyio-4.13.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 4 items
+
+tests/integration/test_pipeline.py::test_e2e_100_blocks PASSED           [ 25%]
+tests/integration/test_pipeline.py::test_idempotent_upsert PASSED        [ 50%]
+tests/integration/test_pipeline.py::test_correlation_ids_preserved PASSED [ 75%]
+tests/integration/test_pipeline.py::test_empty_blocks PASSED             [100%]
+
+=============================== warnings summary ===============================
+tests/integration/test_pipeline.py::test_e2e_100_blocks
+tests/integration/test_pipeline.py::test_idempotent_upsert
+tests/integration/test_pipeline.py::test_correlation_ids_preserved
+tests/integration/test_pipeline.py::test_empty_blocks
+  /home/parzival/projects/megaeth-projects/.venv/lib/python3.11/site-packages/qdrant_client/qdrant_remote.py:282: UserWarning: Qdrant client version 1.18.0 is incompatible with server version 1.16.3. Major versions should match and minor version difference must not exceed 1. Set check_compatibility=False to skip version check.
+    show_warning(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 4 passed, 4 warnings in 6.53s =========================

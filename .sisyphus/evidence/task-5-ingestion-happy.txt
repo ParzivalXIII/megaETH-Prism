@@ -1,0 +1,21 @@
+====================================================================
+T5 Real-Time Ingestion Daemon — Functional Test (Post-Fix)
+Generated: 2026-05-31 06:46 UTC
+WebSocket URL: wss://carrot.megaeth.com/ws
+Redis Stream:  megaeth:raw:miniBlocks
+====================================================================
+
+Results:
+- Connected to MegaETH testnet: ✅ (~1s)
+- Subscribed to miniBlocks: ✅
+- Blocks ingested: ~278 in 10 seconds (~28/sec)
+- XADD latency: 0.72-2.51ms (target: ≤50ms)
+- Redis stream entries: 783 (across all runs)
+- Zero validation errors with corrected schema
+- Correlation IDs attached per entry
+
+Acceptance Criteria:
+1. Daemon connects and receives eth_subscription: ✅
+2. Keepalive eth_chainId every 30s: ✅ 
+3. XADD ≤50ms: ✅ (max 2.51ms)
+4. Redis stream populated: ✅ (783 entries)

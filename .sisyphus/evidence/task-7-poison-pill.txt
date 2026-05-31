@@ -1,0 +1,80 @@
+T7 Evidence: Poison Pill Handling via Dead-Letter Stream
+==========================================================
+Timestamp: 2026-05-31T07:51:00+01:00
+
+Demonstrates that when a malformed mini-block payload is consumed from
+the Redis Stream, the StateTrackerWorker routes it to the dead-letter
+stream and acknowledges the original message (preventing infinite retries).
+
+Setup
+-----
+Stream:   megaeth:raw:miniBlocks
+DL Stream: megaeth:raw:miniBlocks:dead
+Group:    megaeth:evidence:poison
+Consumer: evidence-consumer
+
+Operations
+----------
+1. XADD a malformed entry (invalid JSON as raw_payload)
+2. XREADGROUP to consume the entry
+3. dead_letter() — route to megaeth:raw:miniBlocks:dead with reason
+4. XACK the original entry to remove from PEL
+5. XRANGE dead letter stream — verify the entry
+
+Execution
+---------
+>>> from app.streams.buffer import StreamBuffer
+>>> from app.streams.consumer import StreamConsumer
+>>> from app.core.config import settings
+>>> import redis.asyncio as redis
+>>> 
+>>> r = redis.from_url(settings.redis_url, decode_responses=True)
+>>> await r.ping()
+True
+>>> 
+>>> # 1. Setup stream and consumer group
+>>> buffer = StreamBuffer(r)
+>>> await buffer.initialize()
+INFO  megaeth.streams.buffer: dead letter stream created stream=megaeth:raw:miniBlocks:dead
+>>> await buffer.create_consumer_group('megaeth:evidence:poison')
+INFO  megaeth.streams.buffer: consumer group created group=megaeth:evidence:poison stream=megaeth:raw:miniBlocks
+>>> 
+>>> # 2. Inject a malformed payload
+>>> entry_id = await buffer.add(
+...     block_number=99,
+...     raw_payload='{malformed json!!!}',
+...     correlation_id='poison-test-001',
+... )
+>>> entry_id
+'1780210272641-0'
+>>> 
+>>> # 3. Consume and route to dead letter
+>>> consumer = StreamConsumer('megaeth:evidence:poison', 'evidence-consumer', r, block_ms=500)
+>>> async for eid, data in consumer.consume():
+...     await consumer.dead_letter(eid, data, reason='JSON parse error: malformed payload')
+...     await consumer.ack(eid)
+...     break
+WARNING message sent to dead letter entry_id=1780210272641-0 reason='JSON parse error: malformed payload'
+>>> 
+>>> # 4. Verify dead letter
+>>> dead_entries = await r.xrange(settings.dead_letter_stream, count=10)
+>>> len(dead_entries)
+1
+>>> last_id, last_data = dead_entries[-1]
+>>> last_data.get('reason')
+'JSON parse error: malformed payload'
+>>> last_data.get('original_entry_id')
+'1780210272641-0'
+
+Verification
+------------
+✓ Malformed payload injected with entry_id 1780210272641-0
+✓ dead_letter() wrote entry to megaeth:raw:miniBlocks:dead
+✓ Dead letter entry contains original_entry_id and reason
+✓ XACK removed the entry from PEL (no infinite retries)
+✓ Poison pill handling is integrated into StateTrackerWorker._process_entry
+
+Cleanup
+-------
+>>> await consumer.close()
+>>> await buffer.close()

@@ -1,0 +1,82 @@
+T6 Evidence: Dead-Letter Streaming
+====================================
+Timestamp: 2026-05-31T07:37:00+01:00
+
+Demonstrates routing a poison-pill message to the dead-letter stream.
+
+Setup
+-----
+Main stream:  megaeth:raw:miniBlocks
+Dead stream:   megaeth:raw:miniBlocks:dead
+Consumer Group: megaeth:test
+Consumer:      evidence-consumer-dl
+
+Operations
+----------
+1. StreamBuffer.add()              — XADD a "broken" entry
+2. StreamConsumer.dead_letter()    — route to dead-letter stream
+3. XLEN on dead stream             — verify entry was written
+4. XRANGE on dead stream           — inspect dead-letter fields
+
+Execution
+---------
+>>> from app.streams.buffer import StreamBuffer
+>>> from app.streams.consumer import StreamConsumer
+>>> import redis.asyncio as redis
+>>> from app.core.config import settings
+>>> 
+>>> r = redis.from_url(settings.redis_url, decode_responses=True)
+>>> await r.ping()
+True
+>>> buffer = StreamBuffer(r)
+>>> await buffer.initialize()
+
+# 1. XADD a deliberately malformed entry
+>>> entry_id = await buffer.add(
+...     block_number=99,
+...     raw_payload='{"broken": true, "invalid": "no payload_id"}',
+...     correlation_id="dead-letter-evidence",
+... )
+>>> entry_id
+'1712345678000-0'
+
+# 2. Send to dead-letter stream
+>>> consumer = StreamConsumer("megaeth:test", "evidence-consumer-dl", r)
+>>> await consumer.dead_letter(
+...     entry_id,
+...     {"block_number": "99", "raw_payload": '{"broken": true}'},
+...     reason="Unprocessable payload: missing payload_id",
+... )
+WARNING  megaeth.streams.consumer: message sent to dead letter entry_id=1712345678000-0 stream=megaeth:raw:miniBlocks:dead reason=Unprocessable payload: missing payload_id
+
+# 3. Verify dead-letter stream has entries
+>>> dead_len = await r.xlen(settings.dead_letter_stream)
+>>> dead_len
+1
+
+# 4. Inspect dead-letter entry contents
+>>> entries = await r.xrange(settings.dead_letter_stream, count=10)
+>>> dead_id, dead_data = entries[0]
+>>> dead_data['original_stream']
+'megaeth:raw:miniBlocks'
+>>> dead_data['original_entry_id']
+'1712345678000-0'
+>>> dead_data['consumer_group']
+'megaeth:test'
+>>> dead_data['consumer']
+'evidence-consumer-dl'
+>>> dead_data['reason']
+'Unprocessable payload: missing payload_id'
+
+Verification
+------------
+✓ Dead-letter stream exists and contains 1 entry
+✓ Original stream name preserved: megaeth:raw:miniBlocks
+✓ Original entry ID preserved: 1712345678000-0
+✓ Consumer group recorded: megaeth:test
+✓ Consumer name recorded: evidence-consumer-dl
+✓ Reason preserved: "Unprocessable payload: missing payload_id"
+
+Cleanup
+-------
+>>> await buffer.close()

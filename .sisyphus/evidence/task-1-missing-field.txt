@@ -1,0 +1,4 @@
+1 validation error for MiniBlockPayload
+block_number
+  Field required [type=missing, input_value={'payload_id': '0xabc', '...ns': [], 'receipts': []}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing

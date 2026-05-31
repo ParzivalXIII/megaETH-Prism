@@ -1,0 +1,69 @@
+T7 Evidence: Upsert 50 Mini-Block Records into PostgreSQL
+==========================================================
+Timestamp: 2026-05-31T07:51:00+01:00
+
+Demonstrates that the StateRepository can bulk-upsert 50 mini-block
+records (5 blocks × 10 indices each) into the mini_block_records table
+with correct composite primary key semantics.
+
+Setup
+-----
+Table: mini_block_records
+PK:    (block_number, index)
+Engine: asyncpg via postgresql+asyncpg://megaeth:megaeth@127.0.0.1:5432/megaeth
+
+Operations
+----------
+1. CREATE TABLE IF NOT EXISTS mini_block_records
+2. TRUNCATE table to start clean
+3. Upsert 50 records: block_number=0..9, index=0..4, mini_block_number=1000..1049
+4. SELECT COUNT(*) — assert 50
+5. SELECT MAX(block_number) — assert 9
+
+Execution
+---------
+>>> from app.state.database import create_async_engine_pool, create_sync_engine
+>>> from app.state.repository import StateRepository, MiniBlockRecord
+>>> 
+>>> sync_engine = create_sync_engine()
+>>> MiniBlockRecord.metadata.create_all(sync_engine)
+>>> sync_engine.dispose()
+>>> 
+>>> engine, session_factory = create_async_engine_pool()
+>>> async with session_factory() as s:
+...     from sqlalchemy import text
+...     await s.execute(text('TRUNCATE TABLE mini_block_records RESTART IDENTITY CASCADE'))
+...     await s.commit()
+>>> 
+>>> async with session_factory() as session:
+...     repo = StateRepository(session)
+...     for i in range(50):
+...         record = MiniBlockRecord(
+...             block_number=i // 5,
+...             index=i % 5,
+...             mini_block_number=1000 + i,
+...             block_timestamp=1700000000 + i,
+...             tx_count=i % 10,
+...             gas_used=21000 * (i + 1),
+...             raw_jsonb={'seq': i, 'block': i // 5, 'idx': i % 5},
+...         )
+...         await repo.upsert(record)
+...     count = await repo.count()
+...     latest = await repo.get_latest_block()
+... 
+>>> count
+50
+>>> latest
+9
+
+Verification
+------------
+✓ 50 records inserted successfully
+✓ MAX(block_number) = 9 (correct: 5 blocks × 10 indices = 0..9)
+✓ session.merge() correctly handles composite PK upserts
+✓ No unique constraint violations despite 50 sequential upserts
+✓ count == 50 confirms no duplicates were created
+
+Cleanup
+-------
+>>> await engine.dispose()

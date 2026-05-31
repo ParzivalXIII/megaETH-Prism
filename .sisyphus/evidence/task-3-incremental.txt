@@ -1,0 +1,67 @@
+qdrant-1  |            _                 _    
+qdrant-1  |   __ _  __| |_ __ __ _ _ __ | |_  
+qdrant-1  |  / _` |/ _` | '__/ _` | '_ \| __| 
+qdrant-1  | | (_| | (_| | | | (_| | | | | |_  
+qdrant-1  |  \__, |\__,_|_|  \__,_|_| |_|\__| 
+qdrant-1  |     |_|                           
+qdrant-1  | 
+qdrant-1  | Version: 1.16.3, build: bd49f45a
+qdrant-1  | Access web UI at http://localhost:6333/dashboard
+qdrant-1  | 
+qdrant-1  | 2026-05-31T06:31:57.844528Z  INFO storage::content_manager::consensus::persistent: Loading raft state from ./storage/raft_state.json
+qdrant-1  | 2026-05-31T06:31:57.848891Z  INFO qdrant: Distributed mode disabled
+qdrant-1  | 2026-05-31T06:31:57.848971Z  INFO qdrant: Telemetry reporting enabled, id: e234bd69-8b53-4770-a3f4-f18cef4932dc
+qdrant-1  | 2026-05-31T06:31:57.909278Z  INFO qdrant::actix: TLS disabled for REST API
+qdrant-1  | 2026-05-31T06:31:57.909422Z  INFO qdrant::actix: Qdrant HTTP listening on 6333
+qdrant-1  | 2026-05-31T06:31:57.909433Z  INFO actix_server::builder: starting 3 workers
+qdrant-1  | 2026-05-31T06:31:57.909441Z  INFO actix_server::server: Actix runtime found; starting in Actix runtime
+qdrant-1  | 2026-05-31T06:31:57.909459Z  INFO actix_server::server: starting service: "actix-web-service-0.0.0.0:6333", workers: 3, listening on: 0.0.0.0:6333
+qdrant-1  | 2026-05-31T06:31:57.913881Z  INFO qdrant::tonic: Qdrant gRPC listening on 6334
+qdrant-1  | 2026-05-31T06:31:57.913964Z  INFO qdrant::tonic: TLS disabled for gRPC API
+redis-1   | 1:C 31 May 2026 06:30:12.332 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis-1   | 1:C 31 May 2026 06:30:12.333 * Redis version=7.2.13, bits=64, commit=00000000, modified=0, pid=1, just started
+redis-1   | 1:C 31 May 2026 06:30:12.333 * Configuration loaded
+redis-1   | 1:M 31 May 2026 06:30:12.334 * monotonic clock: POSIX clock_gettime
+redis-1   | 1:M 31 May 2026 06:30:12.336 * Running mode=standalone, port=6379.
+redis-1   | 1:M 31 May 2026 06:30:12.337 * Server initialized
+redis-1   | 1:M 31 May 2026 06:30:12.337 * Ready to accept connections tcp
+cohere-embed-1  | INFO:     Waiting for application startup.
+cohere-embed-1  | {"model": "embed-english-v3.0", "input_type": "search_document", "timeout": 30, "retry_attempts": 2, "retry_backoff": 1.0, "event": "CohereEmbedService initialized", "logger": "cohere_embed_client", "level": "info", "timestamp": "2026-05-31T06:30:16.244275Z"}
+cohere-embed-1  | {"environment": "development", "event": "FastAPI application started", "logger": "main", "level": "info", "timestamp": "2026-05-31T06:30:16.244665Z"}
+cohere-embed-1  | INFO:     Application startup complete.
+cohere-embed-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+cohere-embed-1  | INFO:     127.0.0.1:38138 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:34122 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:46918 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:51558 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:51222 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:51224 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:52886 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:51676 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:54404 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:54926 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:34290 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:56882 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:59592 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:60546 - "GET /health HTTP/1.1" 200 OK
+cohere-embed-1  | INFO:     127.0.0.1:57806 - "GET /health HTTP/1.1" 200 OK
+postgres-1      | /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+postgres-1      | 
+postgres-1      | waiting for server to shut down...2026-05-31 06:30:16.454 UTC [41] LOG:  received fast shutdown request
+postgres-1      | .2026-05-31 06:30:16.462 UTC [41] LOG:  aborting any active transactions
+postgres-1      | 2026-05-31 06:30:16.468 UTC [41] LOG:  background worker "logical replication launcher" (PID 47) exited with exit code 1
+postgres-1      | 2026-05-31 06:30:16.476 UTC [42] LOG:  shutting down
+postgres-1      | 2026-05-31 06:30:16.482 UTC [42] LOG:  checkpoint starting: shutdown immediate
+postgres-1      | 2026-05-31 06:30:16.739 UTC [42] LOG:  checkpoint complete: wrote 926 buffers (5.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.060 s, sync=0.163 s, total=0.263 s; sync files=301, longest=0.009 s, average=0.001 s; distance=4272 kB, estimate=4272 kB; lsn=0/191E928, redo lsn=0/191E928
+postgres-1      | 2026-05-31 06:30:16.766 UTC [41] LOG:  database system is shut down
+postgres-1      |  done
+postgres-1      | server stopped
+postgres-1      | 
+postgres-1      | PostgreSQL init process complete; ready for start up.
+postgres-1      | 
+postgres-1      | 2026-05-31 06:30:16.898 UTC [1] LOG:  starting PostgreSQL 16.13 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres-1      | 2026-05-31 06:30:16.899 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres-1      | 2026-05-31 06:30:16.899 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres-1      | 2026-05-31 06:30:16.906 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1      | 2026-05-31 06:30:16.922 UTC [57] LOG:  database system was shut down at 2026-05-31 06:30:16 UTC
+postgres-1      | 2026-05-31 06:30:16.933 UTC [1] LOG:  database system is ready to accept connections
