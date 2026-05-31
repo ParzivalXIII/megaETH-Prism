@@ -4,12 +4,12 @@ Tests inject synthetic miniBlocks via direct Redis XADD (bypassing WebSocket),
 then verify they flow through the pipeline to PostgreSQL and Qdrant.
 """
 
-import json
 import uuid
 
 import pytest
 import pytest_asyncio
 
+from app.core.config import settings
 from app.schemas.mini_block import MiniBlockPayload
 from app.schemas.state import MiniBlockRecord
 from app.schemas.streams import (
@@ -22,7 +22,6 @@ from app.state.database import create_async_engine_pool, create_sync_engine
 from app.state.repository import StateRepository
 from app.streams.consumer import StreamConsumer
 from app.vector.qdrant_client import QdrantManager
-from app.core.config import settings
 
 pytestmark = pytest.mark.asyncio
 

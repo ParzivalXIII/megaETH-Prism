@@ -1,13 +1,13 @@
 import asyncio
 import signal
 
+import app.core.metrics as metrics_
 from app.core.config import settings
 from app.core.logging import get_logger
-import app.core.metrics as metrics_
 from app.schemas.mini_block import MiniBlockPayload
 from app.schemas.vector import VectorPayload
-from app.streams.consumer import StreamConsumer
 from app.streams.buffer import StreamBuffer
+from app.streams.consumer import StreamConsumer
 from app.vector.embedder import CohereEmbedder
 from app.vector.qdrant_client import QdrantManager
 from app.vector.summarizer import build_summary

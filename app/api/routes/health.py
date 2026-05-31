@@ -2,7 +2,8 @@ import time
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_engine, text as sa_text
+from sqlalchemy import create_engine
+from sqlalchemy import text as sa_text
 
 from app.core.config import settings
 from app.core.logging import get_logger

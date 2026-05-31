@@ -59,7 +59,11 @@ def valid_mini_block_data() -> dict[str, Any]:
 def valid_stream_entry_data() -> dict[str, Any]:
     return {
         "block_number": 100,
-        "raw_payload": '{"block_number":"0x138cb41","block_timestamp":"0x6a1bd839","index":"0x9","gas_used":"0x0","transactions":[],"receipts":[]}',
+        "raw_payload": (
+            '{"block_number":"0x138cb41","block_timestamp":"0x6a1bd839",'
+            '"index":"0x9","gas_used":"0x0","transactions":[],'
+            '"receipts":[]}'
+        ),
         "ingested_at": 1700000000.123,
         "correlation_id": "corr-001",
     }

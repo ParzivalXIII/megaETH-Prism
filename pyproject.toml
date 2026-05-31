@@ -29,6 +29,14 @@ dependencies = [
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+lint.select = ["E", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
 [dependency-groups]
 dev = [
     "fakeredis>=2.36.0",

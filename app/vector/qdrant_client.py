@@ -1,5 +1,5 @@
 from qdrant_client import QdrantClient as SyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from app.core.config import settings
 from app.core.logging import get_logger

@@ -15,10 +15,10 @@ from typing import AsyncIterator
 
 import pytest
 
-from app.streams.buffer import StreamBuffer
-from app.streams.consumer import StreamConsumer
 from app.schemas import StreamEntry
 from app.schemas.mini_block import MiniBlockPayload
+from app.streams.buffer import StreamBuffer
+from app.streams.consumer import StreamConsumer
 
 pytestmark = pytest.mark.asyncio
 
@@ -244,6 +244,7 @@ async def test_dead_letter_routing(
 
     # Verify dead letter stream has the entry
     import redis.asyncio as redis
+
     from app.core.config import settings
 
     r = redis.from_url(settings.redis_url, decode_responses=True)

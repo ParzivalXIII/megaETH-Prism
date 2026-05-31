@@ -12,18 +12,17 @@ import time
 import pytest
 
 from app.core.config import settings
-from app.state.database import create_async_engine_pool
+from app.schemas.state import MiniBlockRecord
+from app.state.database import create_async_engine_pool, create_sync_engine
 from app.state.repository import StateRepository
 from app.streams.buffer import StreamBuffer
 from app.streams.consumer import StreamConsumer
-from app.schemas.state import MiniBlockRecord
-from app.state.database import create_sync_engine
 
 from .conftest import (
     SOAK_DURATION_SEC,
+    SOAK_GROUP,
     SOAK_RATE_PER_SEC,
     SOAK_STREAM,
-    SOAK_GROUP,
     generate_blocks,
 )
 
@@ -142,7 +141,7 @@ class TestSoak:
             repo = StateRepository(session)
             db_count = await repo.count()
 
-        print(f"\n=== SOAK RESULTS ===")
+        print("\n=== SOAK RESULTS ===")
         print(f"Duration: {elapsed:.1f}s")
         print(f"Injected: {total_injected}")
         print(f"Processed: {total_processed}")

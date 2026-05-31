@@ -10,8 +10,8 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.state import MiniBlockRecord
 from app.schemas.mini_block import MiniBlockPayload
+from app.schemas.state import MiniBlockRecord
 
 
 class StateRepository:

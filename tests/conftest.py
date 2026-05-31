@@ -6,20 +6,18 @@ bypassing the WebSocket. This decouples tests from the MegaETH network.
 
 import asyncio
 import os
-import uuid
 from typing import Any, AsyncGenerator
 
 import pytest
 import pytest_asyncio
 import redis.asyncio as aioredis
-from sqlalchemy import create_engine, text as sa_text
+from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 from app.schemas.mini_block import MiniBlockPayload
 from app.schemas.state import MiniBlockRecord
 from app.state.database import create_sync_engine
-from app.streams.buffer import StreamBuffer
 
 # Test-specific overrides
 TEST_STREAM_NAME = os.environ.get("TEST_STREAM_NAME", "megaeth:test:miniBlocks")

@@ -1,9 +1,9 @@
 
 import httpx
 
+import app.core.metrics as metrics_
 from app.core.config import settings
 from app.core.logging import get_logger
-import app.core.metrics as metrics_
 
 logger = get_logger("megaeth.vector.embedder")
 
@@ -41,9 +41,10 @@ class CohereEmbedder:
 
         # Try known embedding endpoints in order
         # The actual endpoint may differ; we try the most common ones
+        model = settings.embedding_model
         endpoints_to_try = [
-            {"path": "/v1/embeddings", "json": {"model": settings.embedding_model, "texts": [text], "input_type": "search_document"}},
-            {"path": "/embeddings", "json": {"model": settings.embedding_model, "texts": [text], "input_type": "search_document"}},
+            {"path": "/v1/embeddings", "json": {"model": model, "texts": [text], "input_type": "search_document"}},
+            {"path": "/embeddings", "json": {"model": model, "texts": [text], "input_type": "search_document"}},
             {"path": "/embed", "json": {"texts": [text]}},
         ]
 

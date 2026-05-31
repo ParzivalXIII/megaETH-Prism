@@ -5,9 +5,9 @@ import time
 import uuid
 from typing import Any
 
+import pytest
 import pytest_asyncio
 import redis.asyncio as aioredis
-import pytest
 
 from app.core.config import settings
 from app.schemas.mini_block import MiniBlockPayload

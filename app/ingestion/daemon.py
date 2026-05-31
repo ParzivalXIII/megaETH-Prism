@@ -24,11 +24,11 @@ from app.core.config import settings
 from app.core.logging import bind_correlation_id, get_logger
 from app.ingestion.backoff import ExponentialBackoff
 from app.schemas import (
-    MiniBlockPayload,
     STREAM_FIELD_BLOCK_NUMBER,
     STREAM_FIELD_CORRELATION_ID,
     STREAM_FIELD_INGESTED_AT,
     STREAM_FIELD_RAW_PAYLOAD,
+    MiniBlockPayload,
 )
 
 logger = get_logger("megaeth.ingestion")

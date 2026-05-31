@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import signal
 
-
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.metrics import blocks_failed_total, blocks_processed_total

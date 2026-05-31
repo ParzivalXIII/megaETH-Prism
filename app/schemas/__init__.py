@@ -1,4 +1,5 @@
 from .mini_block import MiniBlockPayload
+from .state import MiniBlockRecord
 from .streams import (
     STREAM_FIELD_BLOCK_NUMBER,
     STREAM_FIELD_CORRELATION_ID,
@@ -6,7 +7,6 @@ from .streams import (
     STREAM_FIELD_RAW_PAYLOAD,
     StreamEntry,
 )
-from .state import MiniBlockRecord
 from .vector import VectorPayload
 
 __all__ = [

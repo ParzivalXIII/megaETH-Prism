@@ -18,6 +18,10 @@ class MiniBlockRecord(SQLModel, table=True):
     Fields match the actual MegaETH testnet miniBlock API response.
     Composite primary key is (block_number, index).
     ``mini_block_number`` is a unique sequential identifier for idempotency.
+
+    Design note: The ``(block_number, index)`` composite PK supersedes the
+    ``payload_id`` field from the original Phase 1 plan — ``mini_block_number``
+    serves as the unique deduplication key instead.
     """
 
     __tablename__: str = "mini_block_records"  # type: ignore[misc]

@@ -31,11 +31,11 @@ import redis.asyncio as redis
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.schemas import (
-    MiniBlockPayload,
     STREAM_FIELD_BLOCK_NUMBER,
     STREAM_FIELD_CORRELATION_ID,
     STREAM_FIELD_INGESTED_AT,
     STREAM_FIELD_RAW_PAYLOAD,
+    MiniBlockPayload,
     StreamEntry,
 )
 

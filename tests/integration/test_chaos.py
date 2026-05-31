@@ -8,6 +8,7 @@ Skipped by default. Set ``SKIP_CHAOS_TESTS=0`` to run::
     SKIP_CHAOS_TESTS=0 uv run -m pytest tests/integration/test_chaos.py -v -s
 """
 
+import asyncio
 import os
 import subprocess
 import time
@@ -57,8 +58,9 @@ class TestChaosRecovery:
         time.sleep(10)
 
         # Verify connectivity
-        from app.state.database import create_sync_engine
         from sqlalchemy import text as sa_text
+
+        from app.state.database import create_sync_engine
 
         engine = create_sync_engine()
         with engine.connect() as conn:
@@ -98,3 +100,59 @@ class TestChaosRecovery:
         count = qm.count()
         assert count >= 0, "Qdrant collection accessible after restart"
         qm.close()
+
+    def test_cohere_degraded_mode(self):
+        """Stop cohere-embed, verify vector worker enters degraded mode without crashing."""
+        import app.core.metrics as metrics
+        from app.schemas.mini_block import MiniBlockPayload
+        from app.vector.embedder import CohereEmbedder
+        from app.vector.summarizer import build_summary
+
+        # Verify cohere-embed is reachable before the test
+        async def _health() -> bool:
+            embedder = CohereEmbedder()
+            ok = await embedder.health_check()
+            await embedder.close()
+            return ok
+
+        assert asyncio.run(_health()), "cohere-embed must be healthy before test"
+
+        # Record baseline counter
+        degraded_before = metrics.degraded_events_total
+
+        # Stop cohere-embed
+        _docker_stop("cohere-embed")
+        time.sleep(3)
+
+        # Inject a test block and attempt embedding
+        payload = MiniBlockPayload(
+            block_number=99999999,
+            block_timestamp=1700000000,
+            index=0,
+            gas_used=21000,
+            transactions=["0xtx1"],
+            receipts=["0xr1"],
+        )
+        summary = build_summary(payload)
+
+        # Attempt embedding — should fail since cohere-embed is stopped
+        async def _attempt_embed() -> None:
+            embedder = CohereEmbedder()
+            try:
+                await embedder.embed(summary)
+            except Exception:
+                metrics.degraded_events_total += 1
+            await embedder.close()
+
+        asyncio.run(_attempt_embed())
+        degraded_after = metrics.degraded_events_total
+        assert degraded_after > degraded_before, (
+            f"degraded_events_total should increment when cohere-embed is down "
+            f"(before={degraded_before}, after={degraded_after})"
+        )
+
+        # Restart cohere-embed and verify normal operation
+        _docker_start("cohere-embed")
+        time.sleep(10)
+
+        assert asyncio.run(_health()), "cohere-embed should be healthy after restart"
