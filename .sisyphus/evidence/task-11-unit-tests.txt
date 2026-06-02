@@ -1,0 +1,41 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.0.3, pluggy-1.6.0 -- /home/parzival/projects/megaeth-projects/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/parzival/projects/megaeth-projects
+configfile: pyproject.toml
+plugins: langsmith-0.8.7, asyncio-1.4.0, anyio-4.13.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 30 items
+
+tests/unit/test_intent_schemas.py::TestTriggerCondition::test_valid_always PASSED [  3%]
+tests/unit/test_intent_schemas.py::TestTriggerCondition::test_valid_with_params PASSED [  6%]
+tests/unit/test_intent_schemas.py::TestTriggerCondition::test_invalid_condition_type PASSED [ 10%]
+tests/unit/test_intent_schemas.py::TestTriggerCondition::test_extra_field_rejected PASSED [ 13%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_valid_execution_payload PASSED [ 16%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_slippage_cap_enforced PASSED [ 20%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_slippage_zero_valid PASSED [ 23%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_missing_required_field PASSED [ 26%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_extra_field_rejected PASSED [ 30%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_invalid_call_data_no_prefix PASSED [ 33%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_invalid_call_data_non_hex PASSED [ 36%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_invalid_target_contract_length PASSED [ 40%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_invalid_target_contract_no_prefix PASSED [ 43%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_invalid_priority PASSED [ 46%]
+tests/unit/test_intent_schemas.py::TestExecutionPayload::test_default_values PASSED [ 50%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_empty_block PASSED [ 53%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_single_transfer PASSED [ 56%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_multiple_transfers PASSED [ 60%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_non_transfer_topic PASSED [ 63%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_failed_transaction PASSED [ 66%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_failed_transaction_int_status PASSED [ 70%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_malformed_log_two_topics PASSED [ 73%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_burn_event PASSED [ 76%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_mint_event PASSED [ 80%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_self_transfer PASSED [ 83%]
+tests/unit/test_transfer_parser.py::TestExtractTransfers::test_address_normalisation PASSED [ 86%]
+tests/unit/test_transfer_parser.py::TestApplyDeltas::test_simple_transfer PASSED [ 90%]
+tests/unit/test_transfer_parser.py::TestApplyDeltas::test_multiple_transfers_aggregation PASSED [ 93%]
+tests/unit/test_transfer_parser.py::TestApplyDeltas::test_self_transfer_skipped PASSED [ 96%]
+tests/unit/test_transfer_parser.py::TestApplyDeltas::test_multiple_tokens PASSED [100%]
+
+============================== 30 passed in 0.13s ==============================

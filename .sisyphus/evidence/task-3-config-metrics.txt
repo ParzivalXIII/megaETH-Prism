@@ -1,0 +1,5 @@
+Config RPC_URL: http://127.0.0.1:8545
+Config execution_stream: megaeth:stream:executions
+Config worker_pool_count: 1
+Metrics all zero: 0
+CONFIG AND METRICS VALIDATION PASSED

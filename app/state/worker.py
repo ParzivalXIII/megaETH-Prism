@@ -21,6 +21,7 @@ from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.metrics import blocks_failed_total, blocks_processed_total
 from app.state.database import create_async_engine_pool, create_sync_engine
+from app.state.models import AssetBalance, TokenTransfer
 from app.state.repository import MiniBlockRecord, StateRepository
 from app.streams.buffer import StreamBuffer
 from app.streams.consumer import StreamConsumer
@@ -59,6 +60,9 @@ class StateTrackerWorker:
         """
         sync_engine = create_sync_engine()
         MiniBlockRecord.metadata.create_all(sync_engine)
+        # Phase 2: create asset balance and token transfer tables
+        AssetBalance.metadata.create_all(sync_engine)
+        TokenTransfer.metadata.create_all(sync_engine)
         sync_engine.dispose()
         logger.info("database tables initialized")
 

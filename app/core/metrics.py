@@ -60,6 +60,45 @@ degraded_events_total: int = 0
 """Number of blocks processed in degraded mode (embedding unavailable)."""
 
 
+# ---------------------------------------------------------------------------
+# Phase 2: Dispatcher / Execution counters
+# ---------------------------------------------------------------------------
+
+dispatcher_intents_received_total: int = 0
+"""Number of execution intents received by the worker pool."""
+
+dispatcher_intents_executed_total: int = 0
+"""Number of intents successfully executed (tx broadcasted)."""
+
+dispatcher_intents_failed_total: int = 0
+"""Number of intents that failed during execution."""
+
+dispatcher_intents_rejected_total: int = 0
+"""Number of intents rejected (slippage cap, invalid payload, etc.)."""
+
+# ---------------------------------------------------------------------------
+# Phase 2: Balance tracking counters
+# ---------------------------------------------------------------------------
+
+transfer_events_parsed_total: int = 0
+"""Number of Transfer events successfully parsed from mini-block receipts."""
+
+transfer_events_failed_total: int = 0
+"""Number of Transfer events that failed to parse."""
+
+transfer_events_skipped_total: int = 0
+"""Number of logs skipped (non-Transfer topic, malformed, etc.)."""
+
+asset_balances_upserted_total: int = 0
+"""Number of AssetBalance rows upserted."""
+
+asset_balances_queried_total: int = 0
+"""Number of AssetBalance queries performed."""
+
+execution_queue_depth: int = 0
+"""Approximate depth of the execution stream (set by worker pool)."""
+
+
 __all__ = [
     "blocks_ingested_total",
     "ws_reconnects_total",
@@ -75,4 +114,14 @@ __all__ = [
     "embeddings_cached",
     "embeddings_computed",
     "degraded_events_total",
+    "dispatcher_intents_received_total",
+    "dispatcher_intents_executed_total",
+    "dispatcher_intents_failed_total",
+    "dispatcher_intents_rejected_total",
+    "transfer_events_parsed_total",
+    "transfer_events_failed_total",
+    "transfer_events_skipped_total",
+    "asset_balances_upserted_total",
+    "asset_balances_queried_total",
+    "execution_queue_depth",
 ]

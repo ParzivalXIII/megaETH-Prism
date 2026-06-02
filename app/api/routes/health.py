@@ -85,6 +85,44 @@ async def health_ready() -> JSONResponse:
         if overall_status == "healthy":
             overall_status = "degraded"
 
+    # Phase 2: Check RPC connectivity
+    try:
+        import httpx as httpx_client
+
+        resp = httpx_client.post(
+            settings.rpc_url,
+            json={"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1},
+            timeout=5.0,
+        )
+        if resp.status_code == 200:
+            checks["rpc"] = "healthy"
+        else:
+            checks["rpc"] = f"unhealthy: status {resp.status_code}"
+            if overall_status == "healthy":
+                overall_status = "degraded"
+    except Exception as e:
+        checks["rpc"] = f"unreachable: {str(e)}"
+        if overall_status == "healthy":
+            overall_status = "degraded"
+
+    # Phase 2: Check execution stream
+    try:
+        import redis as sync_redis
+
+        r = sync_redis.from_url(settings.redis_url, socket_connect_timeout=3)
+        exists = r.exists(settings.execution_stream)
+        r.close()
+        if exists:
+            checks["execution_stream"] = "healthy"
+        else:
+            checks["execution_stream"] = "degraded: stream not created yet"
+            if overall_status == "healthy":
+                overall_status = "degraded"
+    except Exception as e:
+        checks["execution_stream"] = f"unreachable: {str(e)}"
+        if overall_status == "healthy":
+            overall_status = "degraded"
+
     uptime = round(time.monotonic() - _start_time, 2)
 
     result = {

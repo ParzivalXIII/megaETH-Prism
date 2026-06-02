@@ -1,4 +1,4 @@
-"""Supervisor entrypoint — runs all 4 async tasks concurrently.
+"""Supervisor entrypoint — runs all 6 async tasks concurrently.
 
 This is the single entrypoint for the Docker container.
 It starts:
@@ -6,6 +6,8 @@ It starts:
 2. Ingestion daemon (WebSocket -> Redis)
 3. State tracker worker (Redis -> PostgreSQL)
 4. Vector indexer worker (Redis -> Qdrant)
+5. Balance tracker worker (Redis -> PostgreSQL asset balances) [Phase 2]
+6. Execution worker pool (Redis -> transaction dispatch) [Phase 2]
 """
 
 from __future__ import annotations
@@ -50,8 +52,10 @@ def create_app() -> FastAPI:
 
 
 async def supervise() -> None:
-    """Supervisor — runs all 4 async tasks and the API server concurrently."""
+    """Supervisor — runs all 6 async tasks and the API server concurrently."""
+    from app.agents.dispatcher import WorkerPool
     from app.ingestion.daemon import main as ingestion_main
+    from app.state.balance_worker import BalanceTrackerWorker
     from app.state.worker import main as state_worker_main
     from app.vector.worker import main as vector_worker_main
 
@@ -82,20 +86,49 @@ async def supervise() -> None:
     )
     server = uvicorn.Server(config)
 
-    # Start all 4 tasks concurrently
+    # Phase 2: Initialise workers
+    worker_pool = WorkerPool(worker_count=settings.worker_pool_count)
+    await worker_pool.start()
+    logger.info(
+        "Phase 2 worker pool started",
+        worker_count=settings.worker_pool_count,
+    )
+
+    balance_worker = BalanceTrackerWorker()
+    await balance_worker.start()
+    logger.info("Phase 2 balance worker started")
+
+    # Start all 6 tasks concurrently
     api_task = asyncio.create_task(server.serve())
     ingestion_task = asyncio.create_task(ingestion_main())
     state_task = asyncio.create_task(state_worker_main())
     vector_task = asyncio.create_task(vector_worker_main())
+    worker_shutdown_tracker = asyncio.create_task(
+        worker_pool.shutdown_event.wait()
+    )
+    balance_shutdown_tracker = asyncio.create_task(
+        balance_worker.shutdown_event.wait()
+    )
 
-    tasks = [api_task, ingestion_task, state_task, vector_task]
+    tasks = [
+        api_task,
+        ingestion_task,
+        state_task,
+        vector_task,
+        worker_shutdown_tracker,
+        balance_shutdown_tracker,
+    ]
 
     # Wait for shutdown signal
     await shutdown_event.wait()
 
     logger.info("supervisor shutting down all tasks")
 
-    # Cancel all tasks
+    # Stop Phase 2 workers first
+    await worker_pool.stop()
+    await balance_worker.stop()
+
+    # Cancel all remaining tasks
     for task in tasks:
         task.cancel()
 
