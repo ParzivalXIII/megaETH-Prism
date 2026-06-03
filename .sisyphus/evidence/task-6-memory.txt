@@ -1,0 +1,12 @@
+T6: Cognitive Memory Tool
+==========================
+
+search_cognitive_memory @tool created at app/agents/tools/memory.py
+- Embeds query via CohereEmbedder (from context)
+- Searches Qdrant via QdrantManager.search() wrapped in asyncio.to_thread()
+- Returns structured {query, results: [...], count}
+- Handles degraded mode: returns {error: "embedding service unavailable"}
+- Increments agent_tool_call_total metric
+
+Import test: python -c "from app.agents.tools import search_cognitive_memory" -> PASSED
+Qdrant sync wrapped in to_thread: CONFIRMED (asyncio.to_thread(qdrant_client.search, ...))

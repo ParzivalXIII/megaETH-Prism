@@ -1,5 +1,6 @@
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -77,6 +78,76 @@ class Settings(BaseSettings):
 
     balance_consumer_group: str = "megaeth:workers:balances"
     """Consumer group for the balance tracker worker on the main miniBlocks stream."""
+
+    # ------------------------------------------------------------------
+    # Phase 3: LangGraph Agent Configuration
+    # ------------------------------------------------------------------
+
+    opencode_go_api_key: str = ""
+    """API key for the OpenCode Go LLM endpoint."""
+
+    llm_model: str = "deepseek-v4-flash"
+    """LLM model identifier for the agent."""
+
+    llm_base_url: str = "https://opencode.ai/zen/go/v1"
+    """Base URL for the LLM API (langchain appends /chat/completions)."""
+
+    llm_temperature: float = 0.0
+    """LLM temperature for agent reasoning."""
+
+    llm_max_tokens: int = 4096
+    """Maximum tokens per LLM response."""
+
+    subgraph_type: Literal["uniswap_v3", "envio_hyperindex"] = "uniswap_v3"
+    """Which subgraph backend to query for historical data."""
+
+    agent_poll_interval_sec: int = 60
+    """Polling interval when the agent is actively producing payloads."""
+
+    agent_poll_idle_backoff_sec: int = 300
+    """Polling interval when the agent has been idle (no payloads)."""
+
+    agent_max_tool_calls: int = 10
+    """Maximum tool calls per agent invocation (recursion guard)."""
+
+    agent_calldata_allowlist_csv: str = "0xa9059cbb,0x095ea7b3,0x38ed1739"
+    """Comma-separated known-safe function selectors allowed for dispatch (transfer, approve, swap)."""
+
+    default_eth_price: float = 3000.0
+    """Fallback ETH/USD price when oracle is unavailable."""
+
+    default_usdc_price: float = 1.0
+    """Fallback USDC/USD price (stablecoin peg)."""
+
+    # ------------------------------------------------------------------
+    # Validators
+    # ------------------------------------------------------------------
+
+    @field_validator("subgraph_type")
+    @classmethod
+    def _validate_subgraph_type(cls, v: str) -> str:
+        """Ensure subgraph_type is in the allowed set."""
+        allowed = {"uniswap_v3", "envio_hyperindex"}
+        if v not in allowed:
+            raise ValueError(
+                f"subgraph_type must be one of {allowed}, got {v!r}"
+            )
+        return v
+
+    @property
+    def agent_calldata_allowlist(self) -> list[str]:
+        """Parse the CSV ``agent_calldata_allowlist_csv`` into a list of hex selectors."""
+        return [s.strip() for s in self.agent_calldata_allowlist_csv.split(",") if s.strip()]
+
+    @field_validator("agent_poll_interval_sec")
+    @classmethod
+    def _validate_agent_poll_interval(cls, v: int) -> int:
+        """Ensure poll interval is at least 10 seconds."""
+        if v < 10:
+            raise ValueError(
+                f"agent_poll_interval_sec must be >= 10, got {v}"
+            )
+        return v
 
 
 settings = Settings()

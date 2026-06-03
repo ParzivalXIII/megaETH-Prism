@@ -1,0 +1,23 @@
+T9: AgentRunner Lifecycle
+===========================
+
+AgentRunner created at app/agents/runner.py
+- __init__(graph, context, interval_sec, idle_backoff_sec):
+  - _shutdown_event: asyncio.Event() — CONFIRMED
+  - _invocation_lock: asyncio.Lock() — single invocation guarantee — CONFIRMED
+  - _last_had_payload: tracks payload state for interval switching — CONFIRMED
+
+- start(): creates asyncio task for _poll_loop — CONFIRMED
+- stop(): sets shutdown event, waits 30s — CONFIRMED
+- shutdown_event property — CONFIRMED
+
+- _poll_loop():
+  - Wait interval/idle_backoff → acquire lock → invoke graph → update metrics
+  - Follows Phase 1/2 worker pattern — CONFIRMED
+
+- _invoke_graph():
+  - Calls graph.ainvoke() with initial state
+  - Updates agent_invocations_total, _success_total, _error_total
+  - Tracks loop_duration_seconds
+
+Import test: python -c "from app.agents import AgentRunner" -> PASSED

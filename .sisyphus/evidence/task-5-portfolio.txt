@@ -1,0 +1,18 @@
+T5: Local State Tools
+======================
+
+query_portfolio @tool created at app/agents/tools/local_state.py
+- Accepts user_address, token_symbol (optional filter)
+- Uses AssetBalanceRepository.get_portfolio() from session
+- Manages own AsyncSession lifecycle from context factory
+- Address inputs auto-lowered
+- Increments agent_tool_call_total metric
+
+query_balance @tool created at app/agents/tools/local_state.py
+- Accepts user_address, token_address
+- Uses AssetBalanceRepository.get_balance()
+- Manages own AsyncSession lifecycle
+- Address inputs auto-lowered
+- Increments agent_tool_call_total metric
+
+Import test: python -c "from app.agents.tools import query_portfolio, query_balance" -> PASSED

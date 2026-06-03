@@ -1,1 +1,11 @@
-All 30 Phase 2 unit tests pass
+T11: Unit Tests Summary
+========================
+
+Test files created:
+- tests/unit/test_agent_state.py (3 tests) — schema, messages, error propagation
+- tests/unit/test_calldata_safety.py (6 tests) — transfer, approve, transferFrom, unknown, wildcard, slippage
+- tests/unit/test_agent_tools.py (6 tests) — names, callable, missing context errors
+- tests/unit/test_graph_nodes.py (9 tests) — market intel, portfolio, no-action, error, routing x2, recursion x2, has_payload
+- tests/unit/test_triggers.py (6 tests) — always, price_above, price_below, time_deferred, time_met, unknown
+
+Results: 30/30 passed, 0 warnings, 0 failures

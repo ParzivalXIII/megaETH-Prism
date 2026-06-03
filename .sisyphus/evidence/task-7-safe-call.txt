@@ -1,0 +1,6 @@
+T7: Safety Dispatch — Safe Transfer Accepted
+===============================================
+
+Test: dispatch with calldata containing selector 0xa9059cbb (transfer)
+Result: ALLOWED
+Reason: selector is in the default allowlist

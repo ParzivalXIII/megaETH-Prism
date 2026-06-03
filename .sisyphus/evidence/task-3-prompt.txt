@@ -1,0 +1,11 @@
+T3: System Prompt
+===================
+
+AGENT_SYSTEM_PROMPT loaded from app/agents/system_prompt.py
+- Length: 3607 characters (required > 500) -> PASS
+- Contains "dispatch_execution": True -> PASS
+- Contains "NO_ACTION": True -> PASS
+- Contains safety rules (max slippage 1%, max gas 1M wei): present -> PASS
+- Covers decision flow (memory -> subgraph -> portfolio -> act/NO_ACTION): present -> PASS
+- Available tools documented: PASS
+- Export from __init__.py: pending (will happen in T10)

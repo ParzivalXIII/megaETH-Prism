@@ -1,0 +1,30 @@
+T10: Dependencies, API Route & Supervisor Integration
+======================================================
+
+1. app/api/dependencies.py
+   - get_agent_graph() stub replaced with compiled graph singleton — CONFIRMED
+   - Validates OPENCODE_GO_API_KEY (fail fast) — CONFIRMED
+   - Creates ChatOpenAI, collects tools, calls build_agent_graph() — CONFIRMED
+   - Module-level singleton cache — CONFIRMED
+
+2. app/api/routes/agent.py (NEW)
+   - POST /agent/invoke — accepts {user_address, prompt} JSON — CONFIRMED
+   - Returns {status, execution_payload, analysis, error, current_phase} — CONFIRMED
+   - Gets compiled graph from Depends(get_agent_graph) — CONFIRMED
+   - No auth (local-only), documented as such — CONFIRMED
+
+3. app/api/main.py
+   - _build_agent_runner() creates AgentRunner as 7th concurrent task — CONFIRMED
+   - Starts after Phase 2 workers — CONFIRMED
+   - Available as agent_task in tasks list — CONFIRMED
+   - Stops AgentRunner before other workers on shutdown — CONFIRMED
+   - Graceful degradation: skips agent if API key not set — CONFIRMED
+   - Docstring updated to mention 7 tasks — CONFIRMED
+
+4. app/agents/__init__.py
+   - All public symbols exported — CONFIRMED
+
+Import tests:
+- python -c "from app.api.dependencies import get_agent_graph" -> PASSED
+- python -c "from app.api.routes.agent import router" -> PASSED
+- python -c "from app.agents import AgentRunner" -> PASSED

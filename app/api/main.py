@@ -1,19 +1,21 @@
-"""Supervisor entrypoint — runs all 6 async tasks concurrently.
+"""Supervisor entrypoint — runs all 7 async tasks concurrently.
 
 This is the single entrypoint for the Docker container.
 It starts:
-1. FastAPI server (health + metrics)
+1. FastAPI server (health + metrics + agent API)
 2. Ingestion daemon (WebSocket -> Redis)
 3. State tracker worker (Redis -> PostgreSQL)
 4. Vector indexer worker (Redis -> Qdrant)
 5. Balance tracker worker (Redis -> PostgreSQL asset balances) [Phase 2]
 6. Execution worker pool (Redis -> transaction dispatch) [Phase 2]
+7. AgentRunner poll loop (LangGraph -> Redis execution queue) [Phase 3]
 """
 
 from __future__ import annotations
 
 import asyncio
 import signal
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
@@ -42,17 +44,77 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    from app.api.routes.agent import router as agent_router
     from app.api.routes.health import router as health_router
     from app.api.routes.metrics import router as metrics_router
 
     app.include_router(health_router)
     app.include_router(metrics_router)
+    app.include_router(agent_router)
 
     return app
 
 
+async def _build_agent_runner(
+    app: FastAPI,
+) -> tuple[asyncio.Task[Any], Any] | tuple[None, None]:
+    """Build the AgentRunner if OPENCODE_GO_API_KEY is configured.
+
+    Returns ``(agent_task, agent_runner)`` or ``(None, None)`` if the
+    API key is not set.
+    """
+    if not settings.opencode_go_api_key:
+        logger.info("OPENCODE_GO_API_KEY not set — skipping AgentRunner")
+        return None, None
+
+    from app.agents.runner import AgentRunner
+    from app.api.dependencies import (
+        get_agent_graph,
+        get_db_session_factory,
+        get_execution_queue,
+        get_redis_client,
+    )
+
+    try:
+        # Initialise dependencies
+        graph = await get_agent_graph()
+        session_factory = await get_db_session_factory()
+        redis_client = await get_redis_client()
+        execution_queue = await get_execution_queue()
+
+        from app.vector.embedder import CohereEmbedder
+        from app.vector.qdrant_client import QdrantManager
+
+        # Build runtime context
+        context = {
+            "db_session_factory": session_factory,
+            "redis_client": redis_client,
+            "qdrant_client": QdrantManager(),
+            "embedder": CohereEmbedder(),
+            "execution_queue": execution_queue,
+            "user_address": "",  # Set by agent at invocation time
+        }
+
+        runner = AgentRunner(
+            graph=graph,
+            context=context,
+        )
+        runner.start()
+        agent_task = asyncio.create_task(runner.shutdown_event.wait())
+        logger.info("Phase 3 AgentRunner started")
+        return agent_task, runner
+
+    except Exception as e:
+        logger.warning(
+            "AgentRunner initialisation failed — continuing without agent",
+            error=str(e),
+            exc_info=True,
+        )
+        return None, None
+
+
 async def supervise() -> None:
-    """Supervisor — runs all 6 async tasks and the API server concurrently."""
+    """Supervisor — runs all 7 async tasks and the API server concurrently."""
     from app.agents.dispatcher import WorkerPool
     from app.ingestion.daemon import main as ingestion_main
     from app.state.balance_worker import BalanceTrackerWorker
@@ -98,7 +160,10 @@ async def supervise() -> None:
     await balance_worker.start()
     logger.info("Phase 2 balance worker started")
 
-    # Start all 6 tasks concurrently
+    # Phase 3: Initialise agent runner
+    agent_task, agent_runner = await _build_agent_runner(app)
+
+    # Start all tasks concurrently
     api_task = asyncio.create_task(server.serve())
     ingestion_task = asyncio.create_task(ingestion_main())
     state_task = asyncio.create_task(state_worker_main())
@@ -119,12 +184,25 @@ async def supervise() -> None:
         balance_shutdown_tracker,
     ]
 
+    # Add agent task if available
+    agent_shutdown_tracker: asyncio.Task[Any] | None = None
+    if agent_task is not None:
+        agent_shutdown_tracker = agent_task
+        tasks.append(agent_shutdown_tracker)
+        logger.info("supervisor running 7 concurrent tasks")
+    else:
+        logger.info("supervisor running 6 concurrent tasks (no agent)")
+
     # Wait for shutdown signal
     await shutdown_event.wait()
 
     logger.info("supervisor shutting down all tasks")
 
-    # Stop Phase 2 workers first
+    # Stop Phase 3 agent first
+    if agent_runner is not None:
+        await agent_runner.stop()
+
+    # Stop Phase 2 workers
     await worker_pool.stop()
     await balance_worker.stop()
 

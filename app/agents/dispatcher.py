@@ -33,6 +33,8 @@ from app.core.metrics import (
     dispatcher_intents_failed_total,
     dispatcher_intents_received_total,
     dispatcher_intents_rejected_total,
+    trigger_price_evaluated_total,
+    trigger_time_evaluated_total,
 )
 from app.schemas.intent import ExecutionPayload, TriggerCondition
 
@@ -138,18 +140,130 @@ class TransactionExecutor:
     async def _check_conditions(self, condition: TriggerCondition) -> bool:
         """Validate trigger conditions.
 
-        Phase 2 only evaluates ``condition_type="always"`` → ``True``.
-        ``price_threshold`` and ``time_bound`` return ``False`` with a
-        WARNING log (stubbed — price oracle integration deferred to Phase 3).
+        Evaluates three condition types:
+        - ``always`` → always true.
+        - ``price_threshold`` → checks current price against threshold.
+        - ``time_bound`` → checks current time against execute_at/before.
+
+        Price data uses the configured default prices (``default_eth_price``,
+        ``default_usdc_price``) when a real oracle is unavailable.
         """
+        global trigger_price_evaluated_total
+        global trigger_time_evaluated_total
+
         if condition.condition_type == "always":
             return True
 
+        if condition.condition_type == "price_threshold":
+            trigger_price_evaluated_total += 1
+            return await self._evaluate_price_threshold(condition.params)
+
+        if condition.condition_type == "time_bound":
+            trigger_time_evaluated_total += 1
+            return await self._evaluate_time_bound(condition.params)
+
         logger.warning(
-            "trigger condition not evaluated in Phase 2",
+            "unknown trigger condition type",
             condition_type=condition.condition_type,
         )
         return False
+
+    # ------------------------------------------------------------------
+    # Trigger evaluators
+    # ------------------------------------------------------------------
+
+    async def _evaluate_price_threshold(self, params: dict) -> bool:
+        """Evaluate a price threshold trigger.
+
+        Required params:
+        - ``token_pair`` (str): e.g. ``"ETH/USD"``, ``"USDC/USD"``.
+        - ``threshold`` (float): price threshold value.
+        - ``direction`` (str): ``"above"`` or ``"below"``.
+
+        Uses default prices from settings when oracle is unavailable.
+        """
+        pair = str(params.get("token_pair", "ETH/USD"))
+        threshold = float(params.get("threshold", 0.0))
+        direction = str(params.get("direction", "above"))
+
+        current_price = self._get_price(pair)
+        logger.info(
+            "price threshold evaluation",
+            token_pair=pair,
+            threshold=threshold,
+            direction=direction,
+            current_price=current_price,
+        )
+
+        if direction == "above":
+            result = current_price >= threshold
+        elif direction == "below":
+            result = current_price <= threshold
+        else:
+            logger.warning("unknown price direction", direction=direction)
+            return False
+
+        logger.info(
+            "price threshold result",
+            token_pair=pair,
+            met=result,
+        )
+        return result
+
+    async def _evaluate_time_bound(self, params: dict) -> bool:
+        """Evaluate a time-bound trigger.
+
+        Required params:
+        - ``execute_at`` (float): Unix timestamp — do not execute before this.
+        - ``before`` (float): Unix timestamp — execution window closes after this.
+
+        Returns ``True`` only if current time is within the window.
+        """
+        import time as time_module
+
+        now = time_module.time()
+        execute_at = float(params.get("execute_at", 0))
+        before = float(params.get("before", float("inf")))
+
+        if now < execute_at:
+            logger.info(
+                "time condition: deferred",
+                execute_at=execute_at,
+                remaining_seconds=int(execute_at - now),
+            )
+            return False
+
+        if now > before:
+            logger.info(
+                "time condition: window expired",
+                before=before,
+                overdue_seconds=int(now - before),
+            )
+            return False
+
+        logger.info("time condition met")
+        return True
+
+    # ------------------------------------------------------------------
+    # Price stub
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _get_price(pair: str) -> float:
+        """Get the current price for a token pair.
+
+        Phase 3 uses configured default prices.  Future phases will
+        integrate a real price oracle (e.g., Pyth, Chronicle).
+        """
+        from app.core.config import settings as cfg
+
+        pair_upper = pair.upper().replace("/", "")
+        if "ETH" in pair_upper:
+            return cfg.default_eth_price
+        if "USDC" in pair_upper or "USD" in pair_upper:
+            return cfg.default_usdc_price
+        # Default fallback
+        return cfg.default_eth_price
 
     # ------------------------------------------------------------------
     # Transaction assembly, signing, and broadcast
