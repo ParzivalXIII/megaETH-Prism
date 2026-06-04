@@ -1,0 +1,165 @@
+flowchart TD
+    %% External data sources
+    MEGAETH[("MegaETH<br/>wss://carrot.megaeth.com/ws")]
+    ANVIL[("Anvil / Foundry<br/>ws://127.0.0.1:8545")]
+
+    %% Phase 1: Ingestion
+    subgraph INGESTION["Ingestion Daemon (app/ingestion/daemon.py)"]
+        WS_CONNECT["WebSocket Connect"]
+        AUTO_DETECT{"Auto-detect backend?"}
+        SUB_MINI["Subscribe miniBlocks<br/>(MegaETH native)"]
+        SUB_NEWH["Subscribe newHeads<br/>(Standard EVM)"]
+        NORMALIZE["Normalize block data"]
+        VALIDATE["Pydantic validation<br/>MiniBlockPayload"]
+        XADD["XADD to Redis Stream<br/>~1ms, MAXLEN 500K, approx trim"]
+        KEEPALIVE["eth_chainId keepalive<br/>every 30s (separate task)"]
+        BACKOFF["Exponential backoff<br/>1s base, 16s cap"]
+    end
+
+    %% Redis Stream Buffer
+    subgraph REDIS["Redis Stream Buffer (app/streams/)"]
+        BUFFER["StreamBuffer<br/>Lifecycle, XADD, XTRIM<br/>Dead-letter init"]
+        STREAM[("stream: megaeth:raw:miniBlocks<br/>Consumer Groups")]
+        DEAD_LETTER[("stream: megaeth:raw:miniBlocks:dead<br/>Poison pills")]
+    end
+
+    %% Consumer group pattern
+    subgraph CONSUMER["StreamConsumer Base Class (app/streams/consumer.py)"]
+        XREADGROUP["XREADGROUP<br/>count=10, block=1000ms"]
+        XACK["XACK<br/>(remove from PEL)"]
+        XAUTOCLAIM["XAUTOCLAIM<br/>30s idle threshold<br/>Orphan recovery"]
+        DEAD_ROUTE["Dead-letter routing<br/>(with full provenance)"]
+    end
+
+    %% Workers
+    subgraph PG_WORKER["StateTrackerWorker (app/state/worker.py)"]
+        PG_PARSE["Parse = MiniBlockPayload"]
+        PG_RECORD["StateRepository.record_from_payload()"]
+        PG_UPSERT["session.merge() = PostgreSQL<br/>ON CONFLICT DO UPDATE"]
+        PG_DB[("PostgreSQL 16<br/>mini_block_records table<br/>Composite PK: block_number, index")]
+    end
+
+    subgraph VECTOR_WORKER["VectorIndexerWorker (app/vector/worker.py)"]
+        VEC_PARSE["Parse = MiniBlockPayload"]
+        VEC_SUMMARIZE["build_summary()<br/>text summary, max 500 chars"]
+        VEC_EMBED["CohereEmbedder.embed()<br/>1024-dim vector"]
+        VEC_QDRANT_UP["QdrantManager.upsert()<br/>PointStruct (payload_id, vector, metadata)"]
+        VEC_DEGRADED{"Embedding failed?"}
+        VEC_DB[("Qdrant<br/>collection: megaeth_blocks<br/>Cosine search")]
+    end
+
+    subgraph BALANCE_WORKER["BalanceTrackerWorker (app/state/balance_worker.py)"]
+        BAL_PARSE["Parse = MiniBlockPayload"]
+        BAL_EXTRACT["extract_transfers()<br/>ERC-20 Transfer events<br/>from receipt logs"]
+        BAL_AGG["apply_deltas()<br/>Net changes per (user, token)"]
+        BAL_UPSERT["AssetBalanceRepository<br/>INSERT ... ON CONFLICT DO UPDATE"]
+        BAL_DB[("PostgreSQL<br/>asset_balances table<br/>Composite PK: user, token)")]
+    end
+
+    %% Phase 2: Execution
+    subgraph EXEC["Execution Stream (app/agents/)"]
+        EXEC_QUEUE["ExecutionQueue<br/>XADD / XREADGROUP<br/>Results: Redis HASH + 24h TTL"]
+        EXEC_STREAM[("stream: megaeth:stream:executions<br/>Consumer group: executors")]
+        EXEC_WORKER["WorkerPool (single-worker)<br/>+ TransactionExecutor"]
+        EXEC_SIGN["asyncio.Lock protected nonce<br/>eth_sendRawTransactionSync (EIP-7966)<br/>= fallback eth_sendRawTransaction"]
+        EXEC_RESULT["Result = Redis HASH<br/>(status, tx_hash, error)"]
+    end
+
+    %% Phase 3: LangGraph
+    subgraph AGENT["LangGraph Agent Layer (app/agents/)"]
+        RUNNER["AgentRunner<br/>Background polling loop<br/>60s active / 300s idle backoff"]
+        STATE["AgentState TypedDict<br/>messages, analysis, payload, error, phase"]
+        MARKET_NODE["Market Intelligence Node<br/>LLM + Tools"]
+        PORTFOLIO_NODE["Portfolio Router Node<br/>LLM + Tools"]
+        MARKET_TOOLS["ToolNode<br/>search_cognitive_memory<br/>query_historical_subgraph"]
+        PORTFOLIO_TOOLS["ToolNode<br/>query_portfolio / query_balance<br/>dispatch_execution"]
+        DISPATCH_TOOL["dispatch_execution()<br/>Calldata safety layer<br/>= ExecutionQueue.enqueue()"]
+    end
+
+    %% Health & API
+    subgraph API["FastAPI (app/api/)"]
+        HEALTH_LIVE["GET /health/live<br/>Always 200 (process alive)"]
+        HEALTH_READY["GET /health/ready<br/>PG + Redis + Qdrant + Cohere + RPC"]
+        METRICS["GET /metrics<br/>Prometheus exposition format<br/>28+ counters + 2 gauges"]
+        AGENT_API["POST /agent/invoke<br/>Manual LangGraph invocation"]
+    end
+
+    %% ========== FLOWS ==========
+
+    %% Ingestion flow
+    MEGAETH --> WS_CONNECT
+    ANVIL --> WS_CONNECT
+    WS_CONNECT --> AUTO_DETECT
+    AUTO_DETECT -->|chain_id=6343 (MegaETH)| SUB_MINI
+    AUTO_DETECT -->|chain_id=31337 (Anvil)| SUB_NEWH
+    AUTO_DETECT -->|auto mode| SUB_MINI
+    SUB_MINI --> NORMALIZE
+    SUB_NEWH --> NORMALIZE
+    NORMALIZE --> VALIDATE
+    VALIDATE --> XADD
+    KEEPALIVE -.->|separate asyncio task| WS_CONNECT
+    XADD -->|connection lost| BACKOFF
+    BACKOFF --> WS_CONNECT
+
+    %% Buffer flow
+    XADD --> BUFFER --> STREAM
+    STREAM --> DEAD_LETTER
+
+    %% Consumer group subscriptions
+    STREAM -->|consumer group: megaeth:workers:postgres| XREADGROUP
+    STREAM -->|consumer group: megaeth:workers:qdrant| XREADGROUP
+    STREAM -->|consumer group: megaeth:workers:balances| XREADGROUP
+
+    %% Data processing flows
+    XREADGROUP -->|"entry (stream_id, data)"| PG_WORKER
+    XREADGROUP -->|"entry (stream_id, data)"| VECTOR_WORKER
+    XREADGROUP -->|"entry (stream_id, data)"| BALANCE_WORKER
+
+    PG_PARSE --> PG_RECORD --> PG_UPSERT --> PG_DB --> XACK
+    VEC_PARSE --> VEC_SUMMARIZE --> VEC_EMBED --> VEC_DEGRADED
+    VEC_DEGRADED -->|no| VEC_QDRANT_UP --> VEC_DB --> XACK
+    VEC_DEGRADED -->|yes| XACK
+    BAL_PARSE --> BAL_EXTRACT --> BAL_AGG --> BAL_UPSERT --> BAL_DB --> XACK
+
+    %% Consumer loop back
+    XACK -->|continue consumption| XREADGROUP
+
+    %% Orphan recovery
+    XAUTOCLAIM -->|reclaim unprocessed entries| PG_WORKER
+    XAUTOCLAIM -->|reclaim unprocessed entries| VECTOR_WORKER
+    XAUTOCLAIM -->|reclaim unprocessed entries| BALANCE_WORKER
+
+    %% Dead letter
+    XREADGROUP -->|exception after 3 retries| DEAD_ROUTE --> DEAD_LETTER --> XACK
+
+    %% Agent flow
+    RUNNER --> STATE --> MARKET_NODE
+    MARKET_NODE -->|tool_calls?| MARKET_TOOLS
+    MARKET_NODE -->|no tools| PORTFOLIO_NODE
+    MARKET_TOOLS --> PORTFOLIO_NODE
+    PORTFOLIO_NODE -->|dispatch action?| PORTFOLIO_TOOLS
+    PORTFOLIO_NODE -->|no action| END((End))
+    PORTFOLIO_TOOLS --> DISPATCH_TOOL
+    DISPATCH_TOOL --> EXEC_QUEUE --> EXEC_STREAM
+    EXEC_STREAM -->|XREADGROUP| EXEC_WORKER --> EXEC_SIGN --> EXEC_RESULT
+
+    %% Health check connections
+    HEALTH_READY -.->|check PG| PG_DB
+    HEALTH_READY -.->|check Redis| STREAM
+    HEALTH_READY -.->|check Qdrant| VEC_DB
+    METRICS -.->|expose counters| HEALTH_LIVE
+
+    %% ========== STYLING ==========
+    classDef stream fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef worker fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef storage fill:#bfb,stroke:#333,stroke-width:2px;
+    classDef agent fill:#fbb,stroke:#333,stroke-width:2px;
+    classDef api fill:#ffd,stroke:#333,stroke-width:1px;
+    classDef ingest fill:#ffe6cc,stroke:#333,stroke-width:1px;
+    classDef exec fill:#e1d5e7,stroke:#333,stroke-width:1px;
+
+    class STREAM,DEAD_LETTER,EXEC_STREAM stream;
+    class PG_WORKER,VECTOR_WORKER,BALANCE_WORKER,EXEC_WORKER worker;
+    class PG_DB,VEC_DB,BAL_DB storage;
+    class RUNNER,MARKET_NODE,PORTFOLIO_NODE,MARKET_TOOLS,PORTFOLIO_TOOLS agent;
+    class HEALTH_LIVE,HEALTH_READY,METRICS,AGENT_API api;
