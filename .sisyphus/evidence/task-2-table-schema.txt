@@ -1,2 +1,0 @@
-Tables in metadata: ['asset_balances', 'token_transfers']
-TABLE SCHEMA VALIDATION PASSED

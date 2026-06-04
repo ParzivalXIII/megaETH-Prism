@@ -1,5 +1,0 @@
-NAME                                   IMAGE                  COMMAND                  SERVICE        CREATED          STATUS                    PORTS
-megaeth-orchestration-cohere-embed-1   cohere-embed:latest    "uvicorn main:app --…"   cohere-embed   2 minutes ago    Up 2 minutes (healthy)    0.0.0.0:8001->8000/tcp, [::]:8001->8000/tcp
-megaeth-orchestration-postgres-1       postgres:16-alpine     "docker-entrypoint.s…"   postgres       2 minutes ago    Up 2 minutes (healthy)    0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
-megaeth-orchestration-qdrant-1         qdrant/qdrant:latest   "./entrypoint.sh"        qdrant         44 seconds ago   Up 42 seconds (healthy)   0.0.0.0:6333->6333/tcp, [::]:6333->6333/tcp
-megaeth-orchestration-redis-1          redis:7.2-alpine       "docker-entrypoint.s…"   redis          2 minutes ago    Up 2 minutes (healthy)    0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp

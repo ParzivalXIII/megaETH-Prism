@@ -1,4 +1,0 @@
-{"event": "before binding", "logger": "qa-correlation", "level": "info", "timestamp": "2026-05-31T06:27:27.314685Z"}
-{"endpoint": "/api/health", "event": "processing request", "correlation_id": "3cf9b35d-25d6-4ab6-a80b-006465de3170", "logger": "qa-correlation", "level": "info", "timestamp": "2026-05-31T06:27:27.315235Z"}
-{"current_rpm": 950, "limit": 1000, "event": "rate limit approaching", "correlation_id": "3cf9b35d-25d6-4ab6-a80b-006465de3170", "logger": "qa-correlation", "level": "warning", "timestamp": "2026-05-31T06:27:27.315458Z"}
-{"event": "after reset", "logger": "qa-correlation", "level": "info", "timestamp": "2026-05-31T06:27:27.315632Z"}

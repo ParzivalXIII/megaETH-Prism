@@ -6,11 +6,19 @@ dist/
 wheels/
 *.egg-info
 
+# Type checking and linting caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
 # Virtual environments
 .venv
 
 # User
 .opencode/
+
+# Sisyphus plan and evidence files
+.sisyphus/
 
 # Environment and secrets
 .env
