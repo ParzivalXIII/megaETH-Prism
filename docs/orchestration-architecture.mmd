@@ -90,8 +90,8 @@ flowchart TD
     MEGAETH --> WS_CONNECT
     ANVIL --> WS_CONNECT
     WS_CONNECT --> AUTO_DETECT
-    AUTO_DETECT -->|chain_id=6343 (MegaETH)| SUB_MINI
-    AUTO_DETECT -->|chain_id=31337 (Anvil)| SUB_NEWH
+    AUTO_DETECT -->|chain_id=6343 - MegaETH| SUB_MINI
+    AUTO_DETECT -->|chain_id=31337 - Anvil| SUB_NEWH
     AUTO_DETECT -->|auto mode| SUB_MINI
     SUB_MINI --> NORMALIZE
     SUB_NEWH --> NORMALIZE
@@ -111,9 +111,9 @@ flowchart TD
     STREAM -->|consumer group: megaeth:workers:balances| XREADGROUP
 
     %% Data processing flows
-    XREADGROUP -->|"entry (stream_id, data)"| PG_WORKER
-    XREADGROUP -->|"entry (stream_id, data)"| VECTOR_WORKER
-    XREADGROUP -->|"entry (stream_id, data)"| BALANCE_WORKER
+    XREADGROUP -->|entry - stream_id, data| PG_WORKER
+    XREADGROUP -->|entry - stream_id, data| VECTOR_WORKER
+    XREADGROUP -->|entry - stream_id, data| BALANCE_WORKER
 
     PG_PARSE --> PG_RECORD --> PG_UPSERT --> PG_DB --> XACK
     VEC_PARSE --> VEC_SUMMARIZE --> VEC_EMBED --> VEC_DEGRADED
