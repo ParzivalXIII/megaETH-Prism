@@ -2,22 +2,22 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-ParzivalXIII/megaETH--Prism-8A2BE2)](https://github.com/ParzivalXIII/megaETH-Prism)
 
-**MegaETH development skill suite** for AI agents, plus a **production-ready event-driven orchestration system** (Phase 1 + Phase 2 + Phase 3) for autonomous agent infrastructure on MegaETH.
+**MegaETH development skill suite** for AI agents, plus a **production-ready event-driven orchestration system** for autonomous agent infrastructure on MegaETH.
 
 ## Overview
 
 This repository contains:
 
-- **Phase 1 pipeline** — A decoupled, event-driven ingestion system that connects to MegaETH or a local Foundry Anvil node, buffers real-time block data in Redis Streams, persists to PostgreSQL, and indexes into Qdrant for vector similarity search.
-- **Phase 2 cognitive infrastructure** — Execution intent schemas, real-time asset balance tracking via ERC-20 Transfer event extraction, and an async worker pool that signs and broadcasts transactions to MegaETH.
-- **Phase 3 LangGraph cognition layer** — A two-agent LangGraph StateGraph (Market Intelligence → Portfolio Router) that runs as a background polling loop, queries Qdrant memory and PostgreSQL state, produces typed `ExecutionPayload` intents, and dispatches them to the Phase 2 execution stream. Tools are executed via LangGraph `ToolNode`, with calldata safety enforced by a function-selector allowlist.
+- **Block ingestion pipeline** — A decoupled, event-driven ingestion system that connects to MegaETH or a local Foundry Anvil node, buffers real-time block data in Redis Streams, persists to PostgreSQL, and indexes into Qdrant for vector similarity search.
+- **Transaction execution infrastructure** — Execution intent schemas, real-time asset balance tracking via ERC-20 Transfer event extraction, and an async worker pool that signs and broadcasts transactions to MegaETH.
+- **AI agent layer** — A two-agent LangGraph StateGraph (Market Intelligence → Portfolio Router) that runs as a background polling loop, queries Qdrant memory and PostgreSQL state, produces typed `ExecutionPayload` intents, and dispatches them to the execution stream. Tools are executed via LangGraph `ToolNode`, with calldata safety enforced by a function-selector allowlist.
 - **MegaETH development skill** — 26 knowledge files covering Foundry setup, smart contract patterns, wallet operations, x402 payments, and more.
 
 ## Architecture
 
 ```
  ┌─────────────────────────────────────────────────────────────────────┐
- │                   PHASE 3: LANGGRAPH COGNITION LAYER                │
+ │                    LANGGRAPH AI AGENT LAYER                          │
  │                                                                     │
  │  ┌──────────────────────┐    ┌──────────────────────────────┐       │
  │  │  Market Intelligence  │◄──►│   search_cognitive_memory    │       │
@@ -43,7 +43,7 @@ This repository contains:
                │
                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│                  REDIS EXECUTION STREAM (Phase 2)                     │
+│                    REDIS EXECUTION STREAM                             │
 │           `megaeth:stream:executions` — XADD / XREADGROUP            │
 │           Consumer group: `megaeth:workers:executors`                │
 │           Results stored as Redis HASH with 24h TTL                  │
@@ -51,7 +51,7 @@ This repository contains:
                                  │ (consumes via async worker pool)
                                  ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│                     ASYNC WORKER POOL (Phase 2)                       │
+│                      ASYNC WORKER POOL                                │
 │  TransactionExecutor: validates conditions, signs, broadcasts via    │
 │  eth_sendRawTransactionSync / eth_sendRawTransaction                 │
 │  Single-worker (PRIVATE_KEY) with asyncio.Semaphore concurrency      │
@@ -63,7 +63,7 @@ This repository contains:
 Anvil / MegaETH        ──►  Ingestion Daemon  ──►  Redis Stream Buffer
  WebSocket                                       ┌─── PostgreSQL State Tracker
                                                   ├─── Qdrant Vector Indexer
-                                                  └─── BalanceTrackerWorker (Phase 2)
+                                                  └─── Balance Tracker Worker
                                                        └── ERC-20 Transfer parser
                                                            └── AssetBalance upsert
 ```
@@ -77,7 +77,7 @@ Anvil / MegaETH        ──►  Ingestion Daemon  ──►  Redis Stream Buff
 | **Execution Queue** | Redis STREAM queue for agent intents (XADD/XREADGROUP/XACK) | `app/agents/dispatch.py` |
 | **ERC-20 Transfer Parser** | Extracts Transfer events from mini-block receipt logs | `app/state/transfer_parser.py` |
 | **Asset Balance Repository** | PostgreSQL upsert for per-user asset balances | `app/state/balance_repository.py` |
-| **Balance Tracker Worker** | Consumes from Phase 1 stream → extracts transfers → upserts | `app/state/balance_worker.py` |
+| **Balance Tracker Worker** | Consumes from the ingestion stream → extracts transfers → upserts | `app/state/balance_worker.py` |
 | **Transaction Executor** | Signs & broadcasts transactions via MegaETH RPC | `app/agents/dispatcher.py` |
 | **Worker Pool** | Async workers consuming execution stream, single-worker mode | `app/agents/dispatcher.py` |
 | **Market Intelligence Agent** | LangGraph LLM node — analyses market via Qdrant + subgraph tools | `app/agents/graph.py` |
@@ -134,7 +134,7 @@ Launches PostgreSQL 16, Redis 7.2, Qdrant, and cohere-embed with health checks.
 Copy `.env.example` to `.env` and set:
 
 ```bash
-# Required for Phase 3 agent (get yours at https://opencode.ai/auth)
+# Required for the AI agent layer (get yours at https://opencode.ai/auth)
 OPENCODE_GO_API_KEY=opencode-go-<your-key>
 
 # Optional: override LLM model, subgraph type, polling interval
@@ -159,10 +159,10 @@ uv run python -m app.state.worker       # Redis Stream → PostgreSQL
 uv run python -m app.vector.worker      # Redis Stream → Qdrant
 ```
 
-**Phase 2 components** are started automatically by the supervisor, or can run standalone:
+These additional components are started automatically by the supervisor, or can run standalone:
 
 ```bash
-# Balance tracker (consumes from Phase 1 stream, extracts Transfer events)
+# Balance tracker (consumes from the ingestion stream, extracts Transfer events)
 uv run python -c "
 import asyncio
 from app.state.balance_worker import BalanceTrackerWorker
@@ -183,7 +183,7 @@ asyncio.run(main())
 "
 ```
 
-**Phase 3 components** are started by the supervisor if `OPENCODE_GO_API_KEY` is set:
+The AI agent layer is started by the supervisor if `OPENCODE_GO_API_KEY` is set:
 
 ```bash
 # Invoke the agent manually via API (requires supervisor running)
@@ -225,7 +225,7 @@ asyncio.run(main())
 # Full test suite (142+ tests)
 uv run -m pytest tests/ -v
 
-# Phase 3 specific tests
+# Agent layer unit tests (state, tools, calldata safety, graph nodes, triggers)
 uv run -m pytest tests/unit/test_agent_*.py tests/unit/test_calldata_safety.py tests/unit/test_graph_nodes.py tests/unit/test_triggers.py -v
 uv run -m pytest tests/integration/test_agent_*.py -v
 
@@ -244,7 +244,7 @@ SOAK_DURATION_SEC=30 uv run -m pytest tests/soak/ -v --soak -s
 # Chaos tests (requires Docker)
 SKIP_CHAOS_TESTS=0 uv run -m pytest tests/integration/test_chaos.py -v -s
 
-# Phase 2 integration tests only
+# Execution and balance integration tests
 uv run -m pytest tests/integration/test_dispatcher.py tests/integration/test_asset_balances.py tests/integration/test_balance_worker.py -v
 ```
 
@@ -252,45 +252,45 @@ uv run -m pytest tests/integration/test_dispatcher.py tests/integration/test_ass
 
 ```
 app/
-├── agents/           Phase 2 + Phase 3 agent infrastructure
-│   ├── __init__.py              Phase 3 public API exports
+├── agents/           AI agent infrastructure + execution layer
+│   ├── __init__.py              Public API exports
 │   ├── dispatch.py              ExecutionQueue (Redis STREAM)
 │   ├── dispatcher.py            TransactionExecutor + WorkerPool + TriggerEvaluators
-│   ├── state.py                 AgentState + AgentContext TypedDicts (Phase 3)
-│   ├── system_prompt.py         Agent system prompt constant (Phase 3)
+│   ├── state.py                 AgentState + AgentContext TypedDicts
+│   ├── system_prompt.py         Agent system prompt constant
 │   ├── graph.py                 LangGraph StateGraph (Market Intelligence →
-│   │                            Portfolio Router) with ToolNodes (Phase 3)
-│   ├── runner.py                AgentRunner background polling loop (Phase 3)
+│   │                            Portfolio Router) with ToolNodes
+│   ├── runner.py                AgentRunner background polling loop
 │   └── tools/
 │       ├── __init__.py          Tool re-exports
-│       ├── dispatch.py          ExecutionPayload enqueue + calldata safety (Phase 3)
-│       ├── local_state.py       Portfolio & balance query tools (Phase 3)
-│       ├── memory.py            Cognitive memory search via Qdrant (Phase 3)
-│       └── subgraph.py          SubgraphClient with fixed queries (Phase 3)
+│       ├── dispatch.py          ExecutionPayload enqueue + calldata safety
+│       ├── local_state.py       Portfolio & balance query tools
+│       ├── memory.py            Cognitive memory search via Qdrant
+│       └── subgraph.py          SubgraphClient with fixed queries
 ├── api/              FastAPI endpoints + dependencies
 │   ├── dependencies.py          DI: DB sessions, Redis, queues, agent graph
 │   ├── main.py                  Supervisor — runs all 7 components concurrently
 │   └── routes/
-│       ├── agent.py             POST /agent/invoke (Phase 3)
+│       ├── agent.py             POST /agent/invoke (manual invocation)
 │       ├── health.py            Health checks
 │       └── metrics.py           Prometheus /metrics (incl. agent counters)
 ├── core/             Config, logging, metrics counters
-│   ├── config.py                Settings (Phase 3: LLM, subgraph, polling)
-│   └── metrics.py               Counters (Phase 3: agent invocations, tool calls)
+│   ├── config.py                Settings (LLM, subgraph, polling)
+│   └── metrics.py               Counters (agent invocations, tool calls)
 ├── ingestion/        WebSocket daemon + backoff
 ├── schemas/          Pydantic data contracts
-│   ├── intent.py     ExecutionPayload + TriggerCondition (Phase 2/3)
-│   ├── mini_block.py MiniBlock payload (Phase 1)
-│   ├── state.py      MiniBlockRecord SQLModel (Phase 1)
-│   ├── streams.py    StreamEntry model (Phase 1)
-│   └── vector.py     VectorPayload model (Phase 1)
+│   ├── intent.py     ExecutionPayload + TriggerCondition
+│   ├── mini_block.py MiniBlock payload
+│   ├── state.py      MiniBlockRecord SQLModel
+│   ├── streams.py    StreamEntry model
+│   └── vector.py     VectorPayload model
 ├── state/            PostgreSQL workers + repositories
-│   ├── balance_repository.py  AssetBalance upsert/query (Phase 2)
-│   ├── balance_worker.py      BalanceTrackerWorker (Phase 2)
-│   ├── models.py              AssetBalance + TokenTransfer tables (Phase 2)
-│   ├── repository.py          MiniBlockRecord CRUD (Phase 1)
-│   ├── transfer_parser.py     ERC-20 Transfer event extractor (Phase 2)
-│   └── worker.py              StateTrackerWorker (Phase 1)
+│   ├── balance_repository.py  AssetBalance upsert/query
+│   ├── balance_worker.py      BalanceTrackerWorker
+│   ├── models.py              AssetBalance + TokenTransfer tables
+│   ├── repository.py          MiniBlockRecord CRUD
+│   ├── transfer_parser.py     ERC-20 Transfer event extractor
+│   └── worker.py              StateTrackerWorker
 ├── streams/          Redis Stream buffer + consumer
 └── vector/           Qdrant indexer + embedder + summarizer
 tests/
@@ -300,10 +300,10 @@ tests/
 │                     dispatcher, balances, agent graph, runner, API)
 └── soak/             Endurance test framework
 scripts/
-└── validate_llm.py   LLM structured output validation POC (Phase 3)
+└── validate_llm.py   LLM structured output validation POC
 research/
-├── phase2-patterns.md   Design patterns research (Phase 2)
-└── phase3-research.md   OpenCode Go API + Envio HyperIndex research (Phase 3)
+├── execution-patterns.md   Execution infrastructure design research
+└── agent-research.md       OpenCode Go API + Envio HyperIndex research
 ```
 
 ## Repository
