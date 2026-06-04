@@ -1,4 +1,6 @@
-# MegaETH Projects
+# megaETH-Prism
+
+[![GitHub](https://img.shields.io/badge/GitHub-ParzivalXIII/megaETH--Prism-8A2BE2)](https://github.com/ParzivalXIII/megaETH-Prism)
 
 **MegaETH development skill suite** for AI agents, plus a **production-ready event-driven orchestration system** (Phase 1 + Phase 2 + Phase 3) for autonomous agent infrastructure on MegaETH.
 
@@ -89,6 +91,13 @@ Anvil / MegaETH        ──►  Ingestion Daemon  ──►  Redis Stream Buff
 | **Health & Metrics API** | FastAPI `/health/live`, `/health/ready`, `/metrics` | `app/api/main.py`, `routes/` |
 
 ## Quick Start
+
+### 0. Clone the repository
+
+```bash
+git clone https://github.com/ParzivalXIII/megaETH-Prism.git
+cd megaETH-Prism
+```
 
 ### Prerequisites
 
@@ -296,6 +305,10 @@ research/
 ├── phase2-patterns.md   Design patterns research (Phase 2)
 └── phase3-research.md   OpenCode Go API + Envio HyperIndex research (Phase 3)
 ```
+
+## Repository
+
+[https://github.com/ParzivalXIII/megaETH-Prism](https://github.com/ParzivalXIII/megaETH-Prism)
 
 ## License
 
